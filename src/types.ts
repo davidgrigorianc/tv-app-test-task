@@ -10,9 +10,16 @@ export interface Video {
     Duration: string;
     VideoUrl?: string;
     Description: string;
+    LastSeen?: number;
 }
 
 export interface VideoData {
     Featured: Video;
     TrendingNow: Video[];
+}
+
+export interface FeaturedVideoProps {
+    video: Video;
+    isPlaying: boolean;
+    onPlayClick: () => void;
 }

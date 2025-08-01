@@ -1,16 +1,18 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Menu from './components/Menu/Menu';
 import FeaturedVideo from './components/FeaturedVideo/FeaturedVideo';
 import TrendingCarousel from './components/TrendingCarousel/TrendingCarousel';
 
 import rawData from './data/data.json';
-import type {Video, VideoData} from './types';
+import type { Video, VideoData } from './types';
 
 type ExtendedVideo = Video & { LastSeen?: number };
 
 const App: React.FC = () => {
     const [videos, setVideos] = useState<ExtendedVideo[]>([]);
-    const [selectedVideo, setSelectedVideo] = useState<ExtendedVideo | null>(null);
+    const [selectedVideo, setSelectedVideo] = useState<Video>(rawData.Featured);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const autoplayTimeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         const data = rawData as VideoData;
@@ -30,13 +32,17 @@ const App: React.FC = () => {
             }
             return 0;
         });
-        const featuredInTrending = baseVideos.find(v => v.Id === data.Featured.Id);
+        const featuredInTrending = baseVideos.find((v) => v.Id === data.Featured.Id);
 
         setVideos(sorted);
         setSelectedVideo(sorted[0] || featuredInTrending);
     }, []);
 
     const handleVideoSelect = (video: Video) => {
+        if (autoplayTimeoutRef.current) {
+            clearTimeout(autoplayTimeoutRef.current);
+        }
+
         const now = Date.now();
 
         const lastSeenRaw = sessionStorage.getItem('lastSeenVideos');
@@ -44,21 +50,37 @@ const App: React.FC = () => {
         lastSeenData[video.Id] = now;
         sessionStorage.setItem('lastSeenVideos', JSON.stringify(lastSeenData));
 
-        setSelectedVideo({...video, LastSeen: now});
+        setSelectedVideo({ ...video, LastSeen: now });
+        setIsPlaying(false);
+
+        autoplayTimeoutRef.current = window.setTimeout(() => {
+            setIsPlaying(true);
+        }, 2000);
+    };
+
+    const handlePlayClick = () => {
+        if (autoplayTimeoutRef.current) {
+            clearTimeout(autoplayTimeoutRef.current);
+        }
+        setIsPlaying(true);
     };
 
     return (
         <div className="flex h-screen bg-black text-white">
-            <Menu/>
+            <Menu />
             <main className="h-full w-full overflow-hidden pl-[157px]">
                 <div className="flex h-full flex-col">
                     {selectedVideo && (
                         <div className="flex-grow-[7]">
-                            <FeaturedVideo video={selectedVideo}/>
+                            <FeaturedVideo
+                                video={selectedVideo}
+                                isPlaying={isPlaying}
+                                onPlayClick={handlePlayClick}
+                            />
                         </div>
                     )}
                     <div className="flex-grow-[3]">
-                        <TrendingCarousel videos={videos} onSelect={handleVideoSelect}/>
+                        <TrendingCarousel videos={videos} onSelect={handleVideoSelect} />
                     </div>
                 </div>
             </main>
